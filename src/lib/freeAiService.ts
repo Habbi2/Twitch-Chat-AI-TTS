@@ -213,7 +213,7 @@ export class FreeAiService {
   }
 
   // Responses for repeated topics
-  private getRepeatTopicResponses(message: string, sentiment: string): string[] {
+  private getRepeatTopicResponses(_message: string, _sentiment: string): string[] {
     const responses = [
       "¿En serio? ¿Otra vez con lo mismo? La creatividad no es tu fuerte, ¿verdad?",
       "Déjà vu... ¿O es que el chat está en modo repetición automática?",
@@ -340,7 +340,7 @@ export class FreeAiService {
   }
 
   // Add contextual modifiers for extra variety
-  private addContextualModifiers(response: string, topics: string[]): string {
+  private addContextualModifiers(response: string, _topics: string[]): string {
     const modifiers = [
       "Por cierto, ", "En fin, ", "Bueno, ", "Mira, ", "Oye, ", "Escucha, ",
       "A ver, ", "Digo yo, ", "Pues ", "Claro que ", "Obviamente, "
