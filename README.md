@@ -1,36 +1,128 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🤖 Habbi3 AI Assistant
 
-## Getting Started
+Un asistente de IA sarcástico y divertido para el canal de Twitch **habbi3**. Lee los comentarios del chat en voz alta y da opiniones ingeniosas, sarcásticas e irónicas.
 
-First, run the development server:
+## ✨ Características
 
+- **🎤 Lectura de chat en voz alta**: Lee los comentarios de los espectadores usando síntesis de voz
+- **🤖 Opiniones sarcásticas**: Genera respuestas divertidas, sarcásticas e irónicas sobre los comentarios
+- **🗣️ Reconocimiento de voz**: Escucha comandos de voz del streamer
+- **🇪🇸 En español**: Configurado específicamente para español con comentarios picantes
+- **💰 Completamente gratuito**: Usa servicios gratuitos (Hugging Face, Web Speech API)
+- **🌐 Fácil deployment en Vercel**: Listo para producción
+
+## 🚀 Instalación y Uso
+
+### 1. Instalar dependencias
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configurar variables de entorno
+El archivo `.env.local` ya está configurado para el canal habbi3:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Twitch Configuration
+TWITCH_CHANNEL=habbi3
+TWITCH_BOT_USERNAME=habbi3_ai_bot
+TWITCH_OAUTH_TOKEN=tu_token_actual  # Ya configurado
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Public environment variables (accessible in browser)
+NEXT_PUBLIC_TWITCH_CHANNEL=habbi3
+NEXT_PUBLIC_TWITCH_BOT_USERNAME=habbi3_ai_bot
+NEXT_PUBLIC_TWITCH_OAUTH_TOKEN=tu_token_actual  # Necesario para el navegador
+```
 
-## Learn More
+**Importante**: Para que funcione en el navegador, necesitas agregar `NEXT_PUBLIC_TWITCH_OAUTH_TOKEN` a tu `.env.local`
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Ejecutar en desarrollo
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 4. Abrir en el navegador
+Ve a `http://localhost:3000`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔧 Configuración
 
-## Deploy on Vercel
+### Obtener Token OAuth de Twitch (Opcional)
+1. Ve a [https://twitchapps.com/tmi/](https://twitchapps.com/tmi/)
+2. Autoriza la aplicación
+3. Copia el token oauth y ponlo en `.env.local`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Nota**: El token OAuth es opcional. Sin él, la aplicación funcionará en modo de solo lectura.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🎮 Cómo usar
+
+1. **Conectar**: Haz clic en "Conectar" para conectarte al chat de habbi3
+2. **Activar IA**: Haz clic en "IA Activa" para empezar a generar opiniones sarcásticas
+3. **Escucha por voz**: Activa el micrófono para dar comandos de voz
+4. **Disfruta**: El asistente leerá los comentarios y dará opiniones divertidas
+
+## 💬 Ejemplos de Respuestas Sarcásticas
+
+- **Comentario positivo**: "¡Qué optimista! Me gusta esa energía... aunque sea un poco ingenua."
+- **Pregunta**: "Ooh, una pregunta. Qué conceptual. Déjame consultar mi bola de cristal..."
+- **Spam**: "Ah, el pesimismo clásico. Nunca pasa de moda, ¿verdad?"
+- **Saludo**: "¡Miren! Alguien que sabe saludar. Todo un fenómeno social."
+
+## 🌐 Deploy en Vercel
+
+1. Haz fork de este proyecto
+2. Conecta tu repositorio a Vercel
+3. Agrega las variables de entorno en Vercel
+4. Deploy automático
+
+## 🛠️ Tecnologías Utilizadas
+
+- **Next.js 14**: Framework React con App Router
+- **TypeScript**: Tipado estático
+- **Tailwind CSS**: Estilos modernos
+- **TMI.js**: Cliente de Twitch IRC
+- **Web Speech API**: Síntesis y reconocimiento de voz (gratis)
+- **Hugging Face**: IA gratuita para análisis de sentimientos
+- **Vercel**: Hosting y deployment
+
+## 🎤 Comandos de Voz
+
+Puedes dar estos comandos de voz al asistente:
+
+- "read chat" - Leer todos los mensajes
+- "stop reading" - Solo leer mensajes seleccionados
+- "volume up/down" - Ajustar volumen
+- "speak faster/slower" - Ajustar velocidad
+- "stop talking" - Parar la voz actual
+- "say hello" - Saludar al chat
+
+## 🐛 Resolución de Problemas
+
+### No se conecta a Twitch
+- Verifica el nombre del canal en `.env.local`
+- Asegúrate de que el canal esté en vivo o haya actividad reciente
+- Revisa la consola del navegador para errores
+
+### No funciona la voz
+- Dale permisos de micrófono al navegador
+- Usa Chrome o Edge (mejor compatibilidad con Web Speech API)
+- Verifica que tu dispositivo tenga altavoces/auriculares
+
+### No genera opiniones
+- Revisa que la IA esté activada
+- Verifica la conexión a internet
+- Los servicios de Hugging Face pueden tener límites de rate
+
+## 📝 Licencia
+
+MIT License - Siéntete libre de modificar y usar para tu canal.
+
+## 🤝 Contribuir
+
+¡Las contribuciones son bienvenidas! Especialmente:
+- Más respuestas sarcásticas en español
+- Mejores filtros de mensajes
+- Nuevas características de voz
+- Optimizaciones de rendimiento
+
+---
+
+Hecho con 💜 para el canal de **habbi3** y la comunidad de Twitch
