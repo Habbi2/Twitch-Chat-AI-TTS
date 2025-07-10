@@ -101,7 +101,6 @@ export class TwitchService {
 
   // Filter out unwanted messages
   private isFilteredMessage(message: string, username: string): boolean {
-    const lowercaseMessage = message.toLowerCase();
     const lowercaseUsername = username?.toLowerCase() || '';
 
     console.log(`🔍 Checking filter for: "${message}" from ${username}`);
