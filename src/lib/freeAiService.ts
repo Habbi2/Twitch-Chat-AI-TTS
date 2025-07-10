@@ -3,6 +3,9 @@ export class FreeAiService {
   private huggingFaceUrl: string;
   private model: string;
   private apiToken?: string;
+  private conversationHistory: Array<{message: string, response: string, timestamp: number}> = [];
+  private recentTopics: Set<string> = new Set();
+  private responseHistory: Set<string> = new Set();
 
   constructor() {
     this.huggingFaceUrl = process.env.HUGGINGFACE_API_URL || 'https://api-inference.huggingface.co/models';
@@ -19,6 +22,17 @@ export class FreeAiService {
     try {
       console.log('🤖 Generating opinion for:', chatMessage);
       
+      // Clean up old conversation history (keep only last 50 messages)
+      if (this.conversationHistory.length > 50) {
+        this.conversationHistory = this.conversationHistory.slice(-50);
+      }
+      
+      // Clean up old response history (keep only last 100 responses)
+      if (this.responseHistory.size > 100) {
+        const responses = Array.from(this.responseHistory);
+        this.responseHistory = new Set(responses.slice(-100));
+      }
+      
       // Try sentiment analysis first, but fallback if it fails
       let sentiment = 'NEUTRAL';
       try {
@@ -31,9 +45,19 @@ export class FreeAiService {
         console.log('🔍 Local sentiment detected:', sentiment);
       }
       
-      // Generate opinion based on sentiment and message content
-      const opinion = this.generateLocalOpinion(chatMessage, sentiment);
+      // Generate contextual opinion based on conversation history
+      const opinion = this.generateContextualOpinion(chatMessage, sentiment);
       console.log('💭 Generated opinion:', opinion);
+      
+      // Store in conversation history
+      this.conversationHistory.push({
+        message: chatMessage,
+        response: opinion,
+        timestamp: Date.now()
+      });
+      
+      // Add to response history to avoid repetition
+      this.responseHistory.add(opinion);
       
       return opinion;
     } catch (error) {
@@ -105,73 +129,242 @@ export class FreeAiService {
     }
   }
 
-  // Generate witty, sarcastic Spanish opinions based on patterns and sentiment
-  private generateLocalOpinion(message: string, sentiment: string): string {
+  // Generate witty, contextual Spanish opinions that avoid repetition
+  private generateContextualOpinion(message: string, sentiment: string): string {
     const lowercaseMessage = message.toLowerCase();
     
-    // Witty and sarcastic Spanish opinion templates
-    const opinions = {
+    // Check if we've seen similar messages recently
+    const recentSimilarMessages = this.conversationHistory
+      .filter(h => Date.now() - h.timestamp < 300000) // Last 5 minutes
+      .filter(h => this.calculateSimilarity(h.message.toLowerCase(), lowercaseMessage) > 0.7);
+    
+    // Extract topics from the message
+    const topics = this.extractTopics(lowercaseMessage);
+    topics.forEach(topic => this.recentTopics.add(topic));
+    
+    // Clean up old topics (keep only last 20 topics)
+    if (this.recentTopics.size > 20) {
+      const topicsArray = Array.from(this.recentTopics);
+      this.recentTopics = new Set(topicsArray.slice(-20));
+    }
+    
+    // Generate response based on context and variety
+    let possibleResponses: string[] = [];
+    
+    // Context-aware responses for repeated topics
+    if (recentSimilarMessages.length > 0) {
+      possibleResponses = this.getRepeatTopicResponses(lowercaseMessage, sentiment);
+    }
+    
+    // Topic-specific deep responses
+    if (possibleResponses.length === 0) {
+      possibleResponses = this.getTopicSpecificResponses(lowercaseMessage, sentiment, topics);
+    }
+    
+    // Sentiment-based responses as fallback
+    if (possibleResponses.length === 0) {
+      possibleResponses = this.getSentimentBasedResponses(sentiment);
+    }
+    
+    // Filter out recently used responses
+    const availableResponses = possibleResponses.filter(response => 
+      !this.responseHistory.has(response)
+    );
+    
+    // If all responses were used recently, use the original pool but add variety
+    const finalResponses = availableResponses.length > 0 ? availableResponses : possibleResponses;
+    
+    // Add contextual modifiers for extra variety
+    let selectedResponse = finalResponses[Math.floor(Math.random() * finalResponses.length)];
+    selectedResponse = this.addContextualModifiers(selectedResponse, topics);
+    
+    return selectedResponse;
+  }
+
+  // Calculate similarity between two messages
+  private calculateSimilarity(msg1: string, msg2: string): number {
+    const words1 = msg1.split(' ').filter(w => w.length > 2);
+    const words2 = msg2.split(' ').filter(w => w.length > 2);
+    
+    if (words1.length === 0 || words2.length === 0) return 0;
+    
+    const commonWords = words1.filter(word => words2.includes(word));
+    return commonWords.length / Math.max(words1.length, words2.length);
+  }
+
+  // Extract topics from message
+  private extractTopics(message: string): string[] {
+    const topics: string[] = [];
+    
+    // Gaming topics
+    if (message.match(/\b(juego|jugar|game|gaming|gamer|play|jugando)\b/)) topics.push('gaming');
+    if (message.match(/\b(stream|streaming|directo|vivo|live)\b/)) topics.push('streaming');
+    if (message.match(/\b(música|canción|music|song|sonido)\b/)) topics.push('music');
+    if (message.match(/\b(chat|charla|hablar|talk|talking)\b/)) topics.push('chat');
+    if (message.match(/\b(like|follow|sub|suscri|sigue)\b/)) topics.push('engagement');
+    if (message.match(/\b(noob|malo|bad|skill|habilidad)\b/)) topics.push('skill');
+    if (message.match(/\b(hola|hello|buenas|hi|hey)\b/)) topics.push('greeting');
+    if (message.match(/\b(pregunta|question|\?)\b/)) topics.push('question');
+    if (message.match(/\b(lol|jaja|xd|funny|gracioso|divertido)\b/)) topics.push('humor');
+    if (message.match(/\b(win|ganar|victory|victoria|good|bueno)\b/)) topics.push('success');
+    if (message.match(/\b(fail|fallo|lose|perder|bad|malo)\b/)) topics.push('failure');
+    
+    return topics;
+  }
+
+  // Responses for repeated topics
+  private getRepeatTopicResponses(message: string, sentiment: string): string[] {
+    const responses = [
+      "¿En serio? ¿Otra vez con lo mismo? La creatividad no es tu fuerte, ¿verdad?",
+      "Déjà vu... ¿O es que el chat está en modo repetición automática?",
+      "Vaya, qué original. Nadie había mencionado eso antes... en los últimos 5 minutos.",
+      "¿Estamos en un loop temporal o simplemente no hay ideas nuevas?",
+      "El chat parece un disco rayado. ¿Alguien tiene aceite para la aguja?",
+      "Mismo tema, diferentes palabras. Qué innovador.",
+      "¿Será que todos compartieron el mismo manual de conversación?",
+      "La variedad es la sal de la vida... pero aquí solo hay sal, sin variedad."
+    ];
+    
+    return responses;
+  }
+
+  // Topic-specific contextual responses
+  private getTopicSpecificResponses(message: string, sentiment: string, topics: string[]): string[] {
+    const responses: string[] = [];
+    
+    // Gaming context
+    if (topics.includes('gaming')) {
+      responses.push(
+        "Ah, los videojuegos. Esa noble actividad donde se pierde tiempo con propósito.",
+        "¡Gaming! Porque la vida real no tiene suficientes desafíos imposibles.",
+        "Los juegos: donde todos son expertos hasta que tienen que jugar ellos.",
+        "¿Gaming? Qué coincidencia, estamos en un stream de juegos. Sherlock Holmes tendría envidia.",
+        "Los videojuegos: la única forma socialmente aceptable de gritar a pantallas."
+      );
+    }
+    
+    // Streaming context
+    if (topics.includes('streaming')) {
+      responses.push(
+        "¡Streaming! Porque transmitir tu vida es más fácil que vivirla plenamente.",
+        "Ah sí, el streaming. Donde todos son críticos de cine sin haber visto una película.",
+        "Directo en vivo: donde los errores se vuelven memes instantáneos.",
+        "El streaming: convertir hobbies en trabajos desde 2011.",
+        "¿Streaming? No, esto es un experimento sociológico disfrazado."
+      );
+    }
+    
+    // Music context
+    if (topics.includes('music')) {
+      responses.push(
+        "Música: el lenguaje universal... aunque algunos hablan en dialecto terrible.",
+        "¿Música? Qué concept tan revolucionario para acompañar actividades.",
+        "La música: porque el silencio era demasiado honesto.",
+        "Ah, la música. Ese arte que une a las personas... y las separa en géneros.",
+        "¿Música? Prefiero llamarlo 'sonidos organizados con intención emocional'."
+      );
+    }
+    
+    // Engagement context
+    if (topics.includes('engagement')) {
+      responses.push(
+        "¡Likes y follows! Porque la validación digital es la nueva moneda social.",
+        "Ah, el eterno 'dale like'. Tan sutil como un anuncio de teletienda.",
+        "Suscríbete: porque comprometer tu atención es el nuevo compromiso.",
+        "¿Follow? Claro, porque necesitamos más gente siguiendo y menos liderando.",
+        "Los likes: esa dopamina barata que alimenta el ego moderno."
+      );
+    }
+    
+    // Skill/Performance context
+    if (topics.includes('skill') || topics.includes('success') || topics.includes('failure')) {
+      responses.push(
+        "Skill: esa cosa misteriosa que se adquiere con práctica... qué concepto tan radical.",
+        "¡Habilidad! Porque el talento natural es para los aburridos.",
+        "Las habilidades: se desarrollan con tiempo, paciencia y muchas frustraciones.",
+        "¿Skill? Ese es el DLC de la vida que cuesta tiempo y esfuerzo.",
+        "La habilidad: donde la teoría se encuentra con la realidad y chocan violentamente."
+      );
+    }
+    
+    // Humor context
+    if (topics.includes('humor')) {
+      responses.push(
+        "¡Humor! Porque reír es más barato que la terapia... aunque menos efectivo.",
+        "Jajaja, el sonido universal de 'entendí la referencia'.",
+        "Risa: ese mecanismo de defensa que nos hace olvidar la realidad.",
+        "¿Humor? Ese condimento que hace digerible la existencia.",
+        "La risa: el mejor medicamento... según estudios que nunca leí."
+      );
+    }
+    
+    return responses;
+  }
+
+  // Sentiment-based responses with more variety
+  private getSentimentBasedResponses(sentiment: string): string[] {
+    const responses = {
       POSITIVE: [
-        "¡Qué optimista! Me gusta esa energía... aunque sea un poco ingenua.",
-        "¡Vaya! Alguien se tomó sus vitaminas de positividad hoy.",
-        "Tanto entusiasmo me da miedo... pero está bien, supongo.",
-        "¡Qué hermoso! Casi se me cae una lágrima... casi.",
-        "Este comentario brilla más que mi futuro, y eso ya es decir algo."
+        "¡Qué energía tan contagiosa! Casi me dan ganas de ser optimista... casi.",
+        "Tanto positivismo me ciega. ¿Alguien tiene gafas de sol para emociones?",
+        "¡Vaya! Alguien desayunó arcoíris y unicornios hoy.",
+        "Esa actitud positiva es más brillante que mi futuro profesional.",
+        "¡Qué hermoso! Me dan ganas de sonreír... pero no lo haré por principio.",
+        "Tu optimismo es tan puro que contamina mi cinismo existencial.",
+        "¡Fantástico! Justo lo que necesitaba para equilibrar mi desesperanza.",
+        "Ese entusiasmo podría iluminar una ciudad... o cegar a sus habitantes."
       ],
       NEGATIVE: [
-        "Ah, el pesimismo clásico. Nunca pasa de moda, ¿verdad?",
-        "Veo que alguien despertó con el pie izquierdo... y el derecho también.",
-        "Qué originalidad quejarse. Nadie había pensado en eso antes...",
-        "¡Perfecto! Justo lo que necesitaba para alegrar mi día.",
-        "Gracias por ese rayito de sol. Realmente iluminas el chat.",
-        "Tu negatividad es tan refrescante como un cubito de hielo en el desierto."
+        "Ah, el pesimismo. Un clásico que nunca pasa de moda.",
+        "¡Qué refrescante! Un poco de negatividad para equilibrar el universo.",
+        "Veo que alguien eligió la honestidad emocional hoy. Qué valiente.",
+        "Tu negatividad es tan consistente que es casi inspiradora.",
+        "¡Perfecto! Justo necesitaba algo de realismo crudo en mi día.",
+        "Esa actitud sombría le da profundidad al chat. Muy filosófico.",
+        "¡Excelente! Porque el optimismo estaba sobrevalorado de todas formas.",
+        "Tu pesimismo es tan refinado que podría ser un vino añejo."
       ],
       NEUTRAL: [
-        "Interesante... si es que podemos llamar 'interesante' a esto.",
-        "Vaya comentario más... existente.",
-        "Gracias por ese aporte tan... único.",
-        "El chat siempre sorprende con su... creatividad.",
-        "Qué profundo. Casi filosofico, diría yo.",
-        "Otro comentario para los anales de la historia... o no."
+        "Ah, la neutralidad. Suiza estaría orgullosa.",
+        "¡Qué comentario tan... existente! Realmente ocupa espacio en el chat.",
+        "La mediocridad tiene su encanto. Es predecible y reconfortante.",
+        "¿Neutral? Qué concepto tan radical en estos tiempos polarizados.",
+        "Tu comentario es tan neutral que podría mediar en conflictos internacionales.",
+        "¡Fascinante! Como ver pintura secarse, pero con menos emoción.",
+        "Neutralidad: la Suiza de las emociones. Respetable pero aburrida.",
+        "¡Qué equilibrio! Ni muy alto ni muy bajo, justo en el limbo emocional."
       ]
     };
+    
+    return responses[sentiment as keyof typeof responses] || responses.NEUTRAL;
+  }
 
-    // Sarcastic responses for specific Spanish content
-    if (lowercaseMessage.includes('juego') || lowercaseMessage.includes('jugar') || lowercaseMessage.includes('game')) {
-      return "¡Ah sí! Los juegos, esa actividad tan productiva. Sigamos gastando vida en pixels.";
+  // Add contextual modifiers for extra variety
+  private addContextualModifiers(response: string, topics: string[]): string {
+    const modifiers = [
+      "Por cierto, ", "En fin, ", "Bueno, ", "Mira, ", "Oye, ", "Escucha, ",
+      "A ver, ", "Digo yo, ", "Pues ", "Claro que ", "Obviamente, "
+    ];
+    
+    const endings = [
+      "... o eso creo.", "... pero qué sé yo.", "... supongo.", "... en mi humilde opinión.",
+      "... pero hey, solo soy una IA.", "... o no, ustedes deciden.", "... más o menos.",
+      "... pero no me hagan caso.", "... según mi limitada experiencia.", "... digo yo."
+    ];
+    
+    // Sometimes add modifiers for variety
+    if (Math.random() < 0.3) {
+      const modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+      response = modifier + response.toLowerCase();
     }
     
-    if (lowercaseMessage.includes('música') || lowercaseMessage.includes('canción') || lowercaseMessage.includes('music')) {
-      return "Música... porque hablar es muy mainstream, ¿no?";
+    // Sometimes add endings for variety
+    if (Math.random() < 0.2) {
+      const ending = endings[Math.floor(Math.random() * endings.length)];
+      response = response + ending;
     }
     
-    if (lowercaseMessage.includes('hola') || lowercaseMessage.includes('hello') || lowercaseMessage.includes('buenas')) {
-      return "¡Miren! Alguien que sabe saludar. Todo un fenómeno social.";
-    }
-    
-    if (lowercaseMessage.includes('?')) {
-      return "Ooh, una pregunta. Qué conceptual. Déjame consultar mi bola de cristal...";
-    }
-
-    if (lowercaseMessage.includes('lol') || lowercaseMessage.includes('jaja') || lowercaseMessage.includes('xd')) {
-      return "¡Qué gracioso! Me estoy riendo tanto que casi se me mueve un músculo de la cara.";
-    }
-
-    if (lowercaseMessage.includes('noob') || lowercaseMessage.includes('malo')) {
-      return "Ah, la crítica constructiva. Tan sutil como un ladrillo en la cara.";
-    }
-
-    if (lowercaseMessage.includes('stream') || lowercaseMessage.includes('directo')) {
-      return "Sí, es un stream. Qué observador. Sherlock Holmes estaría orgulloso.";
-    }
-
-    if (lowercaseMessage.includes('like') || lowercaseMessage.includes('follow') || lowercaseMessage.includes('suscri')) {
-      return "¡Ah! El clásico 'dale like y suscríbete'. Qué original y nada desesperado.";
-    }
-
-    // Return random sarcastic opinion based on sentiment
-    const sentimentOpinions = opinions[sentiment as keyof typeof opinions] || opinions.NEUTRAL;
-    return sentimentOpinions[Math.floor(Math.random() * sentimentOpinions.length)];
+    return response;
   }
 
   // Sarcastic Spanish fallback opinions when AI services fail
@@ -182,7 +375,11 @@ export class FreeAiService {
       "Gracias por ese aporte tan valioso para la humanidad.",
       "¡Increíble! Otro comentario para enmarcar.",
       "La sabiduría del chat nunca deja de sorprenderme... o no.",
-      "¡Qué suerte tengo de tener espectadores tan... únicos!"
+      "¡Qué suerte tengo de tener espectadores tan... únicos!",
+      "Bueno, eso fue... interesante. Definamos 'interesante' libremente.",
+      "¡Vaya! Otro comentario para la colección de... comentarios.",
+      "La profundidad de este chat rivaliza con un charco después de la lluvia.",
+      "¡Fascinante! Como ver crecer el pasto, pero menos emocionante."
     ];
     
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
