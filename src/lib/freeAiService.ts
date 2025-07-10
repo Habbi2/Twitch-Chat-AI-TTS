@@ -153,7 +153,7 @@ export class FreeAiService {
     
     // Context-aware responses for repeated topics
     if (recentSimilarMessages.length > 0) {
-      possibleResponses = this.getRepeatTopicResponses(lowercaseMessage, sentiment);
+      possibleResponses = this.getRepeatTopicResponses();
     }
     
     // Topic-specific deep responses
@@ -176,7 +176,7 @@ export class FreeAiService {
     
     // Add contextual modifiers for extra variety
     let selectedResponse = finalResponses[Math.floor(Math.random() * finalResponses.length)];
-    selectedResponse = this.addContextualModifiers(selectedResponse, topics);
+    selectedResponse = this.addContextualModifiers(selectedResponse);
     
     return selectedResponse;
   }
@@ -213,7 +213,7 @@ export class FreeAiService {
   }
 
   // Responses for repeated topics
-  private getRepeatTopicResponses(_message: string, _sentiment: string): string[] {
+  private getRepeatTopicResponses(): string[] {
     const responses = [
       "¿En serio? ¿Otra vez con lo mismo? La creatividad no es tu fuerte, ¿verdad?",
       "Déjà vu... ¿O es que el chat está en modo repetición automática?",
@@ -340,7 +340,7 @@ export class FreeAiService {
   }
 
   // Add contextual modifiers for extra variety
-  private addContextualModifiers(response: string, _topics: string[]): string {
+  private addContextualModifiers(response: string): string {
     const modifiers = [
       "Por cierto, ", "En fin, ", "Bueno, ", "Mira, ", "Oye, ", "Escucha, ",
       "A ver, ", "Digo yo, ", "Pues ", "Claro que ", "Obviamente, "
